@@ -7,6 +7,8 @@ browser, across every core, with an honest account of what it costs.**
 [![Tests](https://img.shields.io/badge/tests-52%20passing-brightgreen.svg)](./tests)
 [![No custody](https://img.shields.io/badge/keys-never%20leave%20your%20machine-a78bfa.svg)](#security-model)
 
+**Live:** [evm-vanity.global-gargoyle.workers.dev](https://evm-vanity.global-gargoyle.workers.dev) (evm-vanity on a Cloudflare Workers preview deployment: the whole site, the API and the discovery documents, running the code in this repository)
+
 A complete vanity wallet stack for Ethereum, Base, Arbitrum, Robinhood Chain and
 every other EVM network: the browser grinder, the site, an HTTP API, a CLI, an
 MCP server for AI assistants, EIP-712 provenance attestations a contract can
@@ -204,6 +206,7 @@ curl -s http://localhost:8788/api/quote \
 | [docs/protocol-split-key.md](docs/protocol-split-key.md) | The delegation protocol and its wire format. |
 | [docs/protocol-attestation.md](docs/protocol-attestation.md) | The EIP-712 format, every verifier check, and the Solidity to check it on chain. |
 | [docs/deploy.md](docs/deploy.md) | Node, Docker, Cloud Run, Cloudflare Workers, static-only. |
+| [docs/discoverability.md](docs/discoverability.md) | The documents crawlers, assistants and agent runtimes read, and where to submit the project. |
 | [SECURITY.md](SECURITY.md) | What this project promises, and what it does not. |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Running it and the quality bar. |
 
