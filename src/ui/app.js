@@ -15,9 +15,23 @@ import { validatePattern, MAX_PATTERN_LENGTH } from '../validation.js';
 import { PRESET_CHIPS } from '../wordlist.js';
 import { difficulty, rarity, formatDuration, formatAttempts, normalizePattern } from '../difficulty.js';
 import { setGrindActivity } from './activity.js';
+import { mountHero } from './hero.js';
 
 const $ = (id) => document.getElementById(id);
 const HEX_ALPHA = '0123456789abcdef';
+
+/**
+ * The hero strip: a candidate address, one quad per character, driven by the
+ * same pattern and rate as the read-outs beside it. The cells the pattern covers
+ * hold the characters that were asked for; the rest churn at the measured attempt
+ * rate and lock to the real address when one is found.
+ */
+const heroStrip = mountHero(document.getElementById('hero'), {
+	alphabet: HEX_ALPHA,
+	length: 40,
+	accent: '#a78bfa',
+	accentAlt: '#22d3ee',
+});
 
 /**
  * Order-of-magnitude hot-loop rate for one secp256k1 point addition plus a
@@ -154,6 +168,7 @@ function update() {
 		: '';
 
 	if (!total) {
+		heroStrip.setPattern('', '');
 		$('preview').innerHTML = `<span class="rest">0x</span><span class="rest">${esc(sample())}</span>`;
 		$('est').textContent = 'type a pattern to see estimated time';
 		$('grind').disabled = true;
@@ -173,6 +188,7 @@ function update() {
 		`<span class="rest">${esc(mid)}</span>` +
 		(suffix ? `<span class="sfx">${esc(suffix)}</span>` : '');
 
+	heroStrip.setPattern(prefix, suffix);
 	const d = difficulty({ prefix, suffix });
 	const r = rarity({ prefix, suffix });
 	$('est').textContent = `${formatAttempts(d.p50)} attempts for an even chance · ${fmtTime(estSeconds(prefix, suffix))} on ${cores} cores · ${r.label}`;
@@ -214,6 +230,7 @@ function endGrindUI() {
 	setPaused(false);
 	setCoreControlsDisabled(false);
 	setGrindActivity(0);
+	heroStrip.setActivity(0);
 }
 
 function showError(message) {
@@ -252,6 +269,8 @@ $('grind').addEventListener('click', async () => {
 
 	abort = new AbortController();
 	controls = {};
+	heroStrip.reset();
+	heroStrip.setPattern(prefix, suffix);
 	try {
 		const result = await grindEoaVanity({
 			prefix: prefix || undefined,
@@ -263,7 +282,9 @@ $('grind').addEventListener('click', async () => {
 				$('attempts').textContent = attempts.toLocaleString();
 				$('rate').textContent = paused ? 'paused' : `${Math.round(rate).toLocaleString()}/s`;
 				$('eta').textContent = eta;
-				setGrindActivity(paused ? 0 : Math.min(1, rate / (RATE_PER_CORE * cores)));
+				const load = paused ? 0 : Math.min(1, rate / (RATE_PER_CORE * cores));
+				setGrindActivity(load);
+				heroStrip.setActivity(load);
 			},
 		});
 		renderResult(result, prefix, suffix);
@@ -302,6 +323,9 @@ function renderResult(result, prefix, suffix) {
 	const midText = body.slice(prefix.length, body.length - suffix.length);
 	const rate = Math.round(result.attempts / (result.durationMs / 1000));
 	const r = rarity({ prefix, suffix });
+	// The strip stops being a simulation the moment there is an answer.
+	heroStrip.lock(display);
+	$('hero-caption').textContent = `${display.slice(0, 8)}…${display.slice(-4)} · found in ${result.attempts.toLocaleString()} attempts`;
 
 	$('result').hidden = false;
 	$('result').innerHTML = `

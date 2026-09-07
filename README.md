@@ -7,7 +7,11 @@ browser, across every core, with an honest account of what it costs.**
 [![Tests](https://img.shields.io/badge/tests-52%20passing-brightgreen.svg)](./tests)
 [![No custody](https://img.shields.io/badge/keys-never%20leave%20your%20machine-a78bfa.svg)](#security-model)
 
-**Live demo:** [evm-vanity.gold-cornucopia.workers.dev](https://evm-vanity.gold-cornucopia.workers.dev) runs this exact code (site, API and discovery documents) on Cloudflare Workers. It is a credential-free preview deployment and the subdomain is disposable; `npx wrangler deploy` puts it on a durable one.
+**Try it without installing anything:** `npx wrangler deploy --temporary` puts this
+whole thing (site, API and discovery documents) on a Cloudflare Workers URL in
+about thirty seconds and needs no account, no token and no configuration. That
+preview is disposable and gets a fresh subdomain every time; `npx wrangler deploy`
+with a Workers-scoped token puts it somewhere permanent.
 
 A complete vanity wallet stack for Ethereum, Base, Arbitrum, Robinhood Chain and
 every other EVM network: the browser grinder, the site, an HTTP API, a CLI, an
