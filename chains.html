@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>Where an EVM vanity address works, and which CREATE2 deployers are live</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="description" content="One EVM vanity key gives you the same address on every EVM chain. This page lists the networks, the deterministic CREATE2 deployers present on each, and re-verifies every claim against the live RPC in your browser.">
+	<link rel="icon" href="/favicon.svg">
+	<link rel="stylesheet" href="/src/ui/site.css">
+	<link rel="canonical" href="https://evm-vanity.dev/chains.html">
+	<meta property="og:type" content="website">
+	<meta property="og:title" content="Where an EVM vanity address works, and which CREATE2 deployers are live">
+	<meta property="og:description" content="One EVM vanity key gives you the same address on every EVM chain. This page lists the networks, the deterministic CREATE2 deployers present on each, and re-verifies every claim against the live RPC in your browser.">
+</head>
+<body>
+	<a href="#main-content" class="skip-link">Skip to main content</a>
+	<canvas id="bg" aria-hidden="true"></canvas>
+	<header class="site-nav">
+		<a class="brand" href="/"><span class="brand-mark"></span> evm-vanity</a>
+		<nav>
+			<a href="/">Grinder</a>
+			<a href="/delegate.html">Delegate</a>
+			<a href="/chains.html" aria-current="page">Chains</a>
+			<a href="/verify.html">Verify</a>
+			<a href="/docs.html">Docs</a>
+			<a href="https://github.com/nirholas/evm-vanity" rel="noopener">GitHub</a>
+		</nav>
+	</header>
+
+	<main id="main-content">
+		<h1>✦ Chains</h1>
+		<p class="lede">
+			An EVM address is <code>keccak256(pubkey)[12:]</code>. It does not depend on a chain, so one grind gives you the same address everywhere,
+			on networks that do not exist yet included. What differs is the explorer, and which deterministic CREATE2 deployers are present if you later
+			want a <em>contract</em> at a vanity address too.
+		</p>
+		<p class="lede" style="font-size:.85rem;margin-top:-.7rem">
+			The table below is not a claim to take on faith. Press the button and your browser asks each chain's public RPC directly, with
+			<code>eth_getCode</code>, and marks every row that disagrees with what this repository says.
+		</p>
+
+		<div class="card">
+			<div class="actions" style="margin-top:0">
+				<button id="probe" class="btn primary" type="button">Verify against live RPCs</button>
+				<span id="probe-status" style="font-size:.8rem;color:var(--muted)"></span>
+			</div>
+			<div id="table" style="margin-top:1rem">loading…</div>
+		</div>
+
+		<div class="section-divider">
+			<h2>The deployers</h2>
+			<div class="card" id="factories"></div>
+		</div>
+	</main>
+
+	<footer class="site-foot">
+		<span>Apache-2.0 · <a href="https://github.com/nirholas/evm-vanity" rel="noopener">source</a> · <a href="/llms.txt">llms.txt</a> · <a href="/openapi.json">OpenAPI</a> · <a href="/.well-known/agents.json">agent card</a></span>
+		<span>Keys are generated in your browser. This page has no analytics and no key ever leaves the tab.</span>
+	</footer>
+
+	<script type="module" src="/src/ui/scene.js"></script>
+	<script type="module" src="/src/ui/chains.js"></script>
+</body>
+</html>

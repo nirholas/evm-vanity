@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>Verify an EVM vanity attestation</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="description" content="Check a signed EIP-712 vanity attestation in your own browser: the pattern, the difficulty claim, the freshness nonce, the split-key non-custody equation, and the ECDSA signature that a Solidity contract can recover with ecrecover.">
+	<link rel="icon" href="/favicon.svg">
+	<link rel="stylesheet" href="/src/ui/site.css">
+	<link rel="canonical" href="https://evm-vanity.dev/verify.html">
+	<meta property="og:type" content="website">
+	<meta property="og:title" content="Verify an EVM vanity attestation">
+	<meta property="og:description" content="Check a signed EIP-712 vanity attestation in your own browser: the pattern, the difficulty claim, the freshness nonce, the split-key non-custody equation, and the ECDSA signature that a Solidity contract can recover with ecrecover.">
+</head>
+<body>
+	<a href="#main-content" class="skip-link">Skip to main content</a>
+	<canvas id="bg" aria-hidden="true"></canvas>
+	<header class="site-nav">
+		<a class="brand" href="/"><span class="brand-mark"></span> evm-vanity</a>
+		<nav>
+			<a href="/">Grinder</a>
+			<a href="/delegate.html">Delegate</a>
+			<a href="/chains.html">Chains</a>
+			<a href="/verify.html" aria-current="page">Verify</a>
+			<a href="/docs.html">Docs</a>
+			<a href="https://github.com/nirholas/evm-vanity" rel="noopener">GitHub</a>
+		</nav>
+	</header>
+
+	<main id="main-content">
+		<h1>✦ Verify an attestation</h1>
+		<p class="lede">
+			Paste a vanity attestation. Verification runs <strong>in this tab</strong> and trusts nothing inside the document: every claim is recomputed, and
+			the signer is recovered from the EIP-712 digest and checked against the issuer list published at
+			<a href="/.well-known/evm-vanity.json">/.well-known/evm-vanity.json</a>, not the address the document names for itself.
+		</p>
+		<div class="card">
+			<label for="cert">Attestation JSON</label>
+			<textarea id="cert" class="t" rows="10" spellcheck="false" placeholder='{ "protocol": "evm-vanity-attestation/v1", … }'></textarea>
+			<div class="actions">
+				<button id="verify" class="btn primary" type="button">Verify</button>
+				<label class="btn" for="file" style="cursor:pointer">Load a file<input id="file" type="file" accept="application/json,.json" hidden /></label>
+			</div>
+			<div id="err" hidden class="error"></div>
+			<div id="out" hidden></div>
+		</div>
+
+		<div class="section-divider">
+			<h2>The same document verifies on chain</h2>
+			<div class="card">
+				<p class="lede" style="font-size:.86rem;margin:0 0 .7rem">
+					An attestation is EIP-712 typed data, so a contract recovers the signer with <code>ecrecover</code> and can gate on it: a marketplace that only
+					lists provably-ground addresses, a registry that records who ground what, an escrow that will not release until the non-custody equation holds.
+				</p>
+				<pre><code>bytes32 constant TYPE_HASH = keccak256(
+    "VanityAttestation(address account,string prefix,string suffix,bool caseSensitive,"
+    "string format,uint256 expectedAttempts,uint256 attempts,bytes32 nonce,"
+    "uint256 issuedAt,bytes32 nonCustodyHash)"
+);
+
+function issuerOf(Attestation calldata a, bytes calldata sig) internal view returns (address) {
+    bytes32 structHash = keccak256(abi.encode(
+        TYPE_HASH, a.account, keccak256(bytes(a.prefix)), keccak256(bytes(a.suffix)),
+        a.caseSensitive, keccak256(bytes(a.format)), a.expectedAttempts, a.attempts,
+        a.nonce, a.issuedAt, a.nonCustodyHash
+    ));
+    bytes32 digest = keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, structHash));
+    (bytes32 r, bytes32 s, uint8 v) = split(sig);
+    return ecrecover(digest, v, r, s);
+}</code></pre>
+				<p class="lede" style="font-size:.82rem;margin:.2rem 0 0">
+					The domain carries no <code>chainId</code> and no <code>verifyingContract</code> on purpose: an attestation is a statement about an address, and
+					an address is the same on every EVM chain. Pinning one would make a true statement fail to verify after a bridge.
+				</p>
+			</div>
+		</div>
+	</main>
+
+	<footer class="site-foot">
+		<span>Apache-2.0 · <a href="https://github.com/nirholas/evm-vanity" rel="noopener">source</a> · <a href="/llms.txt">llms.txt</a> · <a href="/openapi.json">OpenAPI</a> · <a href="/.well-known/agents.json">agent card</a></span>
+		<span>Keys are generated in your browser. This page has no analytics and no key ever leaves the tab.</span>
+	</footer>
+
+	<script type="module" src="/src/ui/scene.js"></script>
+	<script type="module" src="/src/ui/verify.js"></script>
+</body>
+</html>

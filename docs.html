@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>Documentation for evm-vanity</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="description" content="How evm-vanity models difficulty, why entropy is the whole security of a vanity grinder, how secp256k1 split-key delegation works, how EIP-712 attestations verify on chain, and how to run it yourself.">
+	<link rel="icon" href="/favicon.svg">
+	<link rel="stylesheet" href="/src/ui/site.css">
+	<link rel="canonical" href="https://evm-vanity.dev/docs.html">
+	<meta property="og:type" content="website">
+	<meta property="og:title" content="Documentation for evm-vanity">
+	<meta property="og:description" content="The difficulty model, the Profanity lesson, split-key delegation, EIP-712 attestations, the API, the CLI, the MCP server and self-hosting.">
+</head>
+<body>
+	<a href="#main-content" class="skip-link">Skip to main content</a>
+	<canvas id="bg" aria-hidden="true"></canvas>
+	<header class="site-nav">
+		<a class="brand" href="/"><span class="brand-mark"></span> evm-vanity</a>
+		<nav>
+			<a href="/">Grinder</a>
+			<a href="/delegate.html">Delegate</a>
+			<a href="/chains.html">Chains</a>
+			<a href="/verify.html">Verify</a>
+			<a href="/docs.html" aria-current="page">Docs</a>
+			<a href="https://github.com/nirholas/evm-vanity" rel="noopener">GitHub</a>
+		</nav>
+	</header>
+
+	<main id="main-content" class="docs">
+		<h1>✦ Documentation</h1>
+		<p class="lede">
+			Everything this project does, why it does it that way, and how to run it yourself. Every command below runs against the
+			code in this repository.
+		</p>
+
+		<nav class="toc" aria-label="Contents">
+			<a href="#quickstart">Quick start</a>
+			<a href="#difficulty">The difficulty model</a>
+			<a href="#profanity">Entropy and the Profanity break</a>
+			<a href="#splitkey">Split-key delegation</a>
+			<a href="#attestations">EIP-712 attestations</a>
+			<a href="#chains">Chains</a>
+			<a href="#api">HTTP API</a>
+			<a href="#cli">CLI</a>
+			<a href="#mcp">MCP server</a>
+			<a href="#selfhost">Self-hosting</a>
+		</nav>
+
+		<section id="quickstart" class="doc">
+			<h2>Quick start</h2>
+			<p>Grind in the browser at <a href="/">the grinder</a>: nothing to install, and the key never leaves the tab.</p>
+			<pre><code>git clone https://github.com/nirholas/evm-vanity
+cd evm-vanity
+npm install
+npm run dev          # site on :5181, API on :8788</code></pre>
+			<p>Or from the command line, with nothing cloned:</p>
+			<pre><code>npx evm-vanity grind --prefix beef --keystore wallet.json
+npx evm-vanity quote --prefix dEaD
+npx evm-vanity delegate --prefix beef
+npx evm-vanity inspect 0xdEaD…</code></pre>
+		</section>
+
+		<section id="difficulty" class="doc">
+			<h2>The difficulty model</h2>
+			<p>
+				An EVM address is the low 20 bytes of a Keccak-256 digest, rendered as a fixed 40-character hex string. There is no
+				length variance and no leading-zero stripping, so every nibble is independently uniform at both ends. The honest model
+				really is 16⁻ⁿ, and <code>0x0000…</code> costs exactly what <code>0xdead…</code> costs.
+			</p>
+			<p>That is true of all three derivations this project deals with:</p>
+			<pre><code>EOA      address = keccak256(uncompressed pubkey[1:])[12:]
+CREATE   address = keccak256(rlp([sender, nonce]))[12:]
+CREATE2  address = keccak256(0xff | deployer | salt | initCodeHash)[12:]</code></pre>
+			<p>
+				The number people do get wrong is casing. EIP-55 re-cases the hex letters using bits of
+				<code>keccak256(lowercase address)</code>, which behave as fair coin flips, so asking for a <em>specific</em> spelling
+				costs an extra factor of two per letter: <code>dEaD</code> is sixteen times harder than any-case <code>dead</code>.
+				Digits carry no case and cost nothing. Every quote here reports that multiplier explicitly.
+			</p>
+			<p>
+				Grinding is geometric, so the expected value is not a deadline: at the expected attempt count you have had a 63.2%
+				chance of finishing, and one run in twenty takes three times as long. Quotes report p50, p90 and p99 next to the mean
+				because a decision to pay for a grind depends on the tail, not the average.
+			</p>
+		</section>
+
+		<section id="profanity" class="doc">
+			<h2>Entropy, and the Profanity break</h2>
+			<p>
+				In 2022 the most popular EVM vanity generator, Profanity, was found to seed its search from a 32-bit value. Every key it
+				had ever produced was therefore searchable, and tens of millions of dollars were drained from addresses it had generated.
+				The lesson is not "vanity addresses are unsafe": it is that the seed is the whole security of the scheme.
+			</p>
+			<p>This grinder draws a full 256-bit base scalar from the platform CSPRNG, and:</p>
+			<ul>
+				<li>walks incrementally from it (<code>k+i</code>, one point addition per candidate) which is as secret as the base scalar,</li>
+				<li>re-seeds every million candidates so no single run extends one arithmetic progression indefinitely,</li>
+				<li>re-derives every match from scratch through a separate code path and refuses to emit a key that does not control the address it matched.</li>
+			</ul>
+			<p>
+				All three checks live in <code>src/eoa-grinder-worker.js</code> and <code>src/grinder-node.js</code>, and the last one
+				has a test.
+			</p>
+		</section>
+
+		<section id="splitkey" class="doc">
+			<h2>Split-key delegation</h2>
+			<p>
+				Hard patterns need more compute than a browser tab has, and handing the job to someone else normally means handing over
+				the key. Split-key grinding removes the trade with group arithmetic on secp256k1, generator <code>G</code>, order
+				<code>n</code>:
+			</p>
+			<ol>
+				<li>The requester picks a secret scalar <code>k1</code> locally and publishes only <code>P1 = k1·G</code>.</li>
+				<li>A worker searches offsets <code>k2</code>, testing the address of <code>P1 + k2·G</code> against the pattern. It knows
+					<code>k2</code> and <code>P1</code> but not <code>k1</code>, so it cannot compute the private key.</li>
+				<li>On a hit it returns <code>(k2, A)</code>. Anyone can check that the address of <code>P1 + k2·G</code> equals
+					<code>A</code>, with no secret in the calculation.</li>
+				<li>The requester combines <code>k = (k1 + k2) mod n</code> on their own machine.</li>
+			</ol>
+			<p>
+				The offset is not a secret: it is useless without <code>k1</code>, so it travels in the clear with no envelope, no escrow
+				and no trusted delivery.
+			</p>
+			<p>
+				<strong>And on secp256k1 there is no catch.</strong> Private keys on this curve <em>are</em> scalars, so the combined
+				result is an ordinary 32-byte key that imports into MetaMask, ethers, viem, Rabby or a keystore file like any other. The
+				Ed25519 version of this trick, used on Solana, produces an expanded key that seed-only wallets reject. Here, delegated
+				grinding costs you nothing at all.
+			</p>
+			<p>Try it on the <a href="/delegate.html">delegation page</a>, or from the CLI with <code>evm-vanity delegate</code>.</p>
+		</section>
+
+		<section id="attestations" class="doc">
+			<h2>EIP-712 attestations</h2>
+			<p>
+				An attestation is a signed statement about how an address was produced: the pattern, the difficulty under a named model,
+				the grind format, a freshness nonce, and for a split-key grind the two public points whose sum is the address.
+			</p>
+			<p>
+				It is signed as EIP-712 typed data rather than as an opaque blob, because the interesting verifier on EVM is on chain: a
+				marketplace, a registry or an escrow recovers the signer with <code>ecrecover</code> in three lines of Solidity and can
+				refuse to list an address that is not provably ground and never custodied. The <a href="/verify.html">verify page</a>
+				carries the Solidity, and the exact type hash and domain separator are served at
+				<a href="/.well-known/evm-vanity.json">/.well-known/evm-vanity.json</a> so a contract and this library cannot drift apart.
+			</p>
+			<p>
+				The domain deliberately carries no <code>chainId</code> and no <code>verifyingContract</code>: an attestation is a
+				statement about an address, and an address is the same on every EVM chain. Pinning one would make a true statement fail
+				to verify after a bridge.
+			</p>
+			<p>Verification recomputes every claim rather than trusting the document, and reports each one:</p>
+			<pre><code>import { verifyAttestation } from 'evm-vanity/attestation';
+
+const issuers = (await (await fetch(BASE + '/.well-known/evm-vanity.json')).json()).issuers.map(i =&gt; i.address);
+const result  = verifyAttestation(attestation, { issuers });
+
+result.valid;    // true / false
+result.checks;   // per-check audit with human-readable detail</code></pre>
+			<p>
+				Without an issuer list a self-signed forgery passes the signature check, because it signed itself. The verifier says so
+				rather than passing quietly.
+			</p>
+		</section>
+
+		<section id="chains" class="doc">
+			<h2>Chains</h2>
+			<p>
+				One grind covers every EVM chain: the address is derived from the key, not from a network. The registry in
+				<code>src/chains.js</code> exists for the explorer links and for the deterministic CREATE2 deployers, which matter only
+				if you later want a <em>contract</em> at a vanity address.
+			</p>
+			<p>
+				Every row was verified with <code>eth_getCode</code> against the listed public RPC, and the
+				<a href="/chains.html">chains page</a> re-runs that check from your browser so the table can be re-verified rather than
+				trusted. Ethereum, Base, Arbitrum, Robinhood Chain, OP, Polygon, BNB and Avalanche carry all four deployers; Robinhood
+				Chain's testnet is missing only the Coinbase Smart Wallet factory.
+			</p>
+		</section>
+
+		<section id="api" class="doc">
+			<h2>HTTP API</h2>
+			<p>Machine-readable schema: <a href="/openapi.json">/openapi.json</a>. Agent card: <a href="/.well-known/agents.json">/.well-known/agents.json</a>.</p>
+			<table class="api">
+				<thead><tr><th>Endpoint</th><th>What it does</th></tr></thead>
+				<tbody>
+					<tr><td><code>POST /api/quote</code></td><td>Probability, expected attempts, p50/p90/p99, rarity, and the EIP-55 case multiplier.</td></tr>
+					<tr><td><code>POST /api/inspect</code></td><td>Validate an address, check its checksum, and score the pattern it carries.</td></tr>
+					<tr><td><code>GET /api/chains</code></td><td>The chain and deployer registry.</td></tr>
+					<tr><td><code>POST /api/attest</code></td><td>Sign an EIP-712 attestation. Refuses an address that does not match the claimed pattern.</td></tr>
+					<tr><td><code>POST /api/verify</code></td><td>Verify one against the published issuer list.</td></tr>
+					<tr><td><code>POST /api/splitkey/grind</code></td><td>Delegated grinding. Send <code>p1</code> and a pattern, get an offset back.</td></tr>
+					<tr><td><code>POST /api/splitkey/verify</code></td><td>Check that an offset really produces a claimed address.</td></tr>
+					<tr><td><code>POST /api/grind</code></td><td>Custodial server-side grind. <strong>Disabled unless the operator sets <code>ALLOW_SERVER_GRIND=1</code>.</strong></td></tr>
+				</tbody>
+			</table>
+			<pre><code>curl -s https://evm-vanity.dev/api/quote \
+  -H 'content-type: application/json' \
+  -d '{"prefix":"dEaD","attemptsPerSecond":17000}'</code></pre>
+		</section>
+
+		<section id="cli" class="doc">
+			<h2>CLI</h2>
+			<pre><code>npx evm-vanity grind --prefix beef --suffix dead --keystore wallet.json
+npx evm-vanity grind --prefix BeeF                 # EIP-55 spelling, 16x harder
+npx evm-vanity delegate --prefix beef --api https://evm-vanity.dev
+npx evm-vanity quote --prefix beef --rate 17000
+npx evm-vanity inspect 0xdEaD…
+npx evm-vanity verify attestation.json
+npx evm-vanity chains --verify                     # re-probe every RPC</code></pre>
+			<p>
+				<code>grind</code> runs one worker per core. <code>delegate</code> runs the split-key protocol against a remote API and
+				combines locally, so it is safe to point at a service you do not control. Add <code>--json</code> to anything for
+				machine-readable output.
+			</p>
+		</section>
+
+		<section id="mcp" class="doc">
+			<h2>MCP server</h2>
+			<pre><code>{
+  "mcpServers": {
+    "evm-vanity": { "command": "npx", "args": ["-y", "evm-vanity", "mcp"] }
+  }
+}</code></pre>
+			<table class="api">
+				<tbody>
+					<tr><td><code>vanity_quote</code></td><td>Difficulty, rarity and ETA for a pattern.</td></tr>
+					<tr><td><code>vanity_grind</code></td><td>Grind locally on the machine running the server.</td></tr>
+					<tr><td><code>vanity_split_key_grind</code></td><td>Delegate to a remote API without exposing a key.</td></tr>
+					<tr><td><code>vanity_inspect_address</code></td><td>Validate, checksum and score an address.</td></tr>
+					<tr><td><code>vanity_verify_attestation</code></td><td>Verify an attestation offline.</td></tr>
+					<tr><td><code>vanity_chains</code></td><td>Chains and the deployers live on each.</td></tr>
+				</tbody>
+			</table>
+		</section>
+
+		<section id="selfhost" class="doc">
+			<h2>Self-hosting</h2>
+			<p>One Fetch handler, two hosts, no endpoint that behaves differently between them.</p>
+			<pre><code>npm run build
+ATTESTATION_KEY=$(node server/keygen.mjs | head -1 | cut -d= -f2) npm start</code></pre>
+			<pre><code>npm run build
+npx wrangler secret put ATTESTATION_KEY
+npx wrangler deploy</code></pre>
+			<table class="api">
+				<thead><tr><th>Variable</th><th>Meaning</th></tr></thead>
+				<tbody>
+					<tr><td><code>ATTESTATION_KEY</code></td><td>32-byte secp256k1 key (hex) for signing attestations. Unset means an ephemeral per-process key, which the API reports in every response.</td></tr>
+					<tr><td><code>ALLOW_SERVER_GRIND</code></td><td>Set to <code>1</code> to enable the custodial grind endpoint. Off by default, on purpose.</td></tr>
+					<tr><td><code>PORT</code></td><td>Node listen port. Default 8788.</td></tr>
+				</tbody>
+			</table>
+			<p>
+				The attestation key is a signing identity, not a wallet. Do not fund it: it never needs gas, and the service never
+				sends a transaction.
+			</p>
+		</section>
+	</main>
+
+	<footer class="site-foot">
+		<span>Apache-2.0 · <a href="https://github.com/nirholas/evm-vanity" rel="noopener">source</a> · <a href="/llms.txt">llms.txt</a> · <a href="/openapi.json">OpenAPI</a> · <a href="/.well-known/agents.json">agent card</a></span>
+		<span>Keys are generated in your browser. This page has no analytics and no key ever leaves the tab.</span>
+	</footer>
+
+	<script type="module" src="/src/ui/scene.js"></script>
+</body>
+</html>

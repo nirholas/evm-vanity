@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>EVM Vanity Wallet Generator: grind a 0x address in your browser</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="description" content="Open-source EVM vanity address generator. Grind a wallet whose 0x address starts or ends with characters you choose, entirely in your browser across every CPU core. Works on Ethereum, Base, Arbitrum, Robinhood Chain and every EVM network.">
+	<link rel="icon" href="/favicon.svg">
+	<link rel="stylesheet" href="/src/ui/site.css">
+	<link rel="canonical" href="https://evm-vanity.dev/">
+	<meta property="og:type" content="website">
+	<meta property="og:title" content="EVM Vanity Wallet Generator: grind a 0x address in your browser">
+	<meta property="og:description" content="Open-source EVM vanity address generator. Grind a wallet whose 0x address starts or ends with characters you choose, entirely in your browser across every CPU core. Works on Ethereum, Base, Arbitrum, Robinhood Chain and every EVM network.">
+	<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"EVM Vanity Wallet Generator","applicationCategory":"DeveloperApplication","operatingSystem":"Any (browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"license":"https://www.apache.org/licenses/LICENSE-2.0","codeRepository":"https://github.com/nirholas/evm-vanity","description":"Client-side EVM vanity address grinder with secp256k1 split-key delegation and EIP-712 provenance attestations, for Ethereum, Base, Arbitrum, Robinhood Chain and any EVM network."}</script>
+</head>
+<body>
+	<a href="#main-content" class="skip-link">Skip to main content</a>
+	<canvas id="bg" aria-hidden="true"></canvas>
+	<header class="site-nav">
+		<a class="brand" href="/"><span class="brand-mark"></span> evm-vanity</a>
+		<nav>
+			<a href="/" aria-current="page">Grinder</a>
+			<a href="/delegate.html">Delegate</a>
+			<a href="/chains.html">Chains</a>
+			<a href="/verify.html">Verify</a>
+			<a href="/docs.html">Docs</a>
+			<a href="https://github.com/nirholas/evm-vanity" rel="noopener">GitHub</a>
+		</nav>
+	</header>
+
+	<main id="main-content">
+		<h1>✦ EVM vanity wallet generator</h1>
+		<p class="lede">
+			Grind a real Ethereum / EVM wallet whose address starts or ends with characters of your choice, for your agent, treasury, or anywhere a memorable
+			<code>0x</code> address matters. The result is a normal secp256k1 keypair you can import into <strong>MetaMask</strong>, ethers, viem or Rabby.
+			<strong>Runs entirely in your browser.</strong> The private key is never transmitted anywhere.
+		</p>
+
+		<div class="secure-note">
+			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V5l-8-3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+			<span>
+				The base scalar comes from a full 256-bit CSPRNG draw, never a narrowed seed. That is the entire difference between this and the 2022
+				<a href="/docs.html#profanity">Profanity</a> disaster, where a 32-bit seed made every ground key brute-forceable. Each match is independently
+				re-derived and checked before it is shown, and the default export is an encrypted keystore.
+			</span>
+		</div>
+
+		<div class="card">
+			<h2>Pattern</h2>
+			<p class="desc">
+				Hex characters only (0-9, a-f). Each extra character is 16x harder.
+				<strong>Mixed case</strong> (e.g. <code>BeeF</code>) matches the EIP-55 checksum: visually distinctive, and 2x harder per letter.
+			</p>
+
+			<div class="row2">
+				<div>
+					<label for="prefix">Prefix (after 0x)</label>
+					<input id="prefix" type="text" maxlength="10" placeholder="e.g. beef or BeeF" autocomplete="off" spellcheck="false" />
+				</div>
+				<div>
+					<label for="suffix">Suffix</label>
+					<input id="suffix" type="text" maxlength="10" placeholder="e.g. dead" autocomplete="off" spellcheck="false" />
+				</div>
+			</div>
+
+			<div class="preset-row" id="word-chips" aria-label="Quick-pick patterns" style="margin-top:.6rem"></div>
+
+			<div class="preview" id="preview" aria-live="polite"></div>
+
+			<div class="meter" aria-hidden="true">
+				<div class="seg" data-seg="1"></div><div class="seg" data-seg="2"></div>
+				<div class="seg" data-seg="3"></div><div class="seg" data-seg="4"></div>
+				<div class="seg" data-seg="5"></div><div class="seg" data-seg="6"></div>
+			</div>
+
+			<div class="row">
+				<span id="est">type a pattern to see estimated time</span>
+				<span id="case-tag"></span>
+			</div>
+
+			<div class="cores">
+				<div class="cores-head">
+					<label for="core-count">Compute: CPU cores to use</label>
+					<span class="cores-val"><b id="core-count-val">4</b> / <span id="core-max">8</span></span>
+				</div>
+				<div class="cores-row">
+					<input id="core-count" type="range" min="1" max="8" value="4" step="1" aria-label="Number of CPU cores to use for grinding" />
+				</div>
+				<div class="cores-ticks" id="core-ticks" aria-label="Quick core presets"></div>
+				<div class="cores-hint">More cores = faster, but a heavier load on your machine. Pause anytime to free them.</div>
+			</div>
+
+			<div class="actions">
+				<button id="grind" class="btn primary" type="button" disabled>Generate wallet</button>
+				<button id="pause" class="btn" type="button" hidden>Pause</button>
+				<button id="stop" class="btn" type="button" hidden>Stop</button>
+			</div>
+
+			<div id="progress" hidden class="progress">
+				<div class="live">
+					<div>
+						<div class="stat" id="rate">0/s</div>
+						<div style="font-size:.75rem;color:#555">tries/sec across <span id="cores2">?</span> cores<span id="paused-tag" class="paused-tag" hidden>paused</span></div>
+					</div>
+					<div style="text-align:right">
+						<div class="stat"><span id="attempts">0</span></div>
+						<div style="font-size:.75rem;color:#555">attempts · eta <span id="eta">…</span></div>
+					</div>
+				</div>
+				<div class="scan" id="scan"></div>
+			</div>
+
+			<div id="error" hidden class="error"></div>
+			<div id="result" hidden></div>
+		</div>
+
+		<div class="section-divider">
+			<h2>One key, every chain</h2>
+			<div class="card">
+				<p class="lede" style="font-size:.86rem;margin:0 0 .7rem">
+					An EVM address is derived from the key and nothing else, so a single grind gives you the same vanity address on
+					<strong>Ethereum, Base, Arbitrum, Robinhood Chain, OP, Polygon, BNB and Avalanche</strong> at once. Nothing to redeploy, nothing to bridge.
+					<a href="/chains.html">See the chain list</a>, each row verified against its live RPC.
+				</p>
+				<div class="kv"><span class="k">Hard pattern, no custody</span><span class="v"><a href="/delegate.html">split-key delegation</a></span></div>
+				<div class="kv"><span class="k">Provenance a contract can check</span><span class="v"><a href="/verify.html">EIP-712 attestations</a></span></div>
+				<div class="kv"><span class="k">License</span><span class="v">Apache-2.0</span></div>
+			</div>
+		</div>
+	</main>
+
+	<footer class="site-foot">
+		<span>Apache-2.0 · <a href="https://github.com/nirholas/evm-vanity" rel="noopener">source</a> · <a href="/llms.txt">llms.txt</a> · <a href="/openapi.json">OpenAPI</a> · <a href="/.well-known/agents.json">agent card</a></span>
+		<span>Keys are generated in your browser. This page has no analytics and no key ever leaves the tab.</span>
+	</footer>
+
+	<script type="module" src="/src/ui/scene.js"></script>
+	<script type="module" src="/src/ui/app.js"></script>
+</body>
+</html>

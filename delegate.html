@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>Delegate an EVM vanity grind: split-key, zero custody</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="description" content="Hand a hard EVM vanity pattern to a remote grinder without exposing your private key. secp256k1 split-key grinding searches offsets against your public point, and only you can combine the result into an ordinary importable private key.">
+	<link rel="icon" href="/favicon.svg">
+	<link rel="stylesheet" href="/src/ui/site.css">
+	<link rel="canonical" href="https://evm-vanity.dev/delegate.html">
+	<meta property="og:type" content="website">
+	<meta property="og:title" content="Delegate an EVM vanity grind: split-key, zero custody">
+	<meta property="og:description" content="Hand a hard EVM vanity pattern to a remote grinder without exposing your private key. secp256k1 split-key grinding searches offsets against your public point, and only you can combine the result into an ordinary importable private key.">
+</head>
+<body>
+	<a href="#main-content" class="skip-link">Skip to main content</a>
+	<canvas id="bg" aria-hidden="true"></canvas>
+	<header class="site-nav">
+		<a class="brand" href="/"><span class="brand-mark"></span> evm-vanity</a>
+		<nav>
+			<a href="/">Grinder</a>
+			<a href="/delegate.html" aria-current="page">Delegate</a>
+			<a href="/chains.html">Chains</a>
+			<a href="/verify.html">Verify</a>
+			<a href="/docs.html">Docs</a>
+			<a href="https://github.com/nirholas/evm-vanity" rel="noopener">GitHub</a>
+		</nav>
+	</header>
+
+	<main id="main-content">
+		<h1>✦ Delegate a grind, keep the key</h1>
+		<p class="lede">
+			Every paid vanity grinder sees the key it sells you. Split-key grinding removes the objection with arithmetic instead of a promise: your browser
+			picks a secret scalar <code>k1</code> and publishes only the point <code>P1 = k1·G</code>. The remote grinder searches offsets <code>k2</code>
+			until the address of <code>P1 + k2·G</code> matches your pattern, then hands back <code>k2</code>. It never sees <code>k1</code>, so it cannot
+			compute the private key, and you combine <code>k = (k1 + k2) mod n</code> here, in this tab.
+		</p>
+		<p class="lede" style="font-size:.85rem;margin-top:-.7rem">
+			On secp256k1 there is no catch: the combined scalar <em>is</em> an ordinary 32-byte private key. It imports into MetaMask, ethers, viem, Rabby or a
+			keystore file exactly like a key you generated yourself. (The Ed25519 version of this trick, on Solana, produces an expanded key that seed-only
+			wallets reject. Not here.)
+		</p>
+
+		<div class="card">
+			<h2>1 · Your secret share</h2>
+			<p class="desc">Generated in this tab with the browser's CSPRNG. <code>k1</code> is never sent anywhere.</p>
+			<div class="actions" style="margin-top:.3rem"><button id="gen" class="btn primary" type="button">Generate k1 and P1</button></div>
+			<div id="share" hidden style="margin-top:.9rem">
+				<div class="kv"><span class="k">P1 (public, sent to the grinder)</span><span class="v mono" id="p1" style="font-size:.68rem">not generated yet</span></div>
+				<div class="kv"><span class="k">k1 (secret, stays here)</span><span class="v mono" id="k1">held in memory only</span></div>
+			</div>
+		</div>
+
+		<div class="card">
+			<h2>2 · The pattern</h2>
+			<div class="row2">
+				<div>
+					<label for="prefix">Prefix (after 0x)</label>
+					<input id="prefix" type="text" maxlength="10" placeholder="e.g. beef" autocomplete="off" spellcheck="false" />
+				</div>
+				<div>
+					<label for="suffix">Suffix</label>
+					<input id="suffix" type="text" maxlength="10" placeholder="e.g. dead" autocomplete="off" spellcheck="false" />
+				</div>
+			</div>
+			<div class="row"><span id="est">type a pattern to see what it costs</span><span id="case-tag"></span></div>
+			<div class="actions">
+				<button id="run" class="btn primary" type="button" disabled>Delegate the grind</button>
+				<button id="cancel" class="btn" type="button" hidden>Stop</button>
+			</div>
+			<div id="progress" hidden class="progress">
+				<div class="live">
+					<div><div class="stat" id="rounds">0</div><div style="font-size:.75rem;color:#555">requests</div></div>
+					<div style="text-align:right"><div class="stat" id="attempts">0</div><div style="font-size:.75rem;color:#555">offsets tested remotely</div></div>
+				</div>
+			</div>
+			<div id="err" hidden class="error"></div>
+			<div id="out" hidden></div>
+		</div>
+	</main>
+
+	<footer class="site-foot">
+		<span>Apache-2.0 · <a href="https://github.com/nirholas/evm-vanity" rel="noopener">source</a> · <a href="/llms.txt">llms.txt</a> · <a href="/openapi.json">OpenAPI</a> · <a href="/.well-known/agents.json">agent card</a></span>
+		<span>Keys are generated in your browser. This page has no analytics and no key ever leaves the tab.</span>
+	</footer>
+
+	<script type="module" src="/src/ui/scene.js"></script>
+	<script type="module" src="/src/ui/delegate.js"></script>
+</body>
+</html>
