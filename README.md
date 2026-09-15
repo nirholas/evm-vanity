@@ -108,6 +108,24 @@ ATTESTATION_KEY=<32-byte hex> npm start      # one process serves site + API
 
 Cloudflare Workers, Docker, Cloud Run: see [docs/deploy.md](docs/deploy.md).
 
+Install the CLI and library from npm:
+
+```bash
+npm install evm-vanity
+```
+
+```js
+import { addressFromPrivateKey, inspectAddress, splitKey } from 'evm-vanity';
+
+const address = addressFromPrivateKey(privateKey);
+const details = inspectAddress(address);
+const requester = splitKey.generateRequesterShare();
+```
+
+The package root exports address helpers directly. Split-key, attestation,
+chain, difficulty and validation helpers are available as namespaces; the
+existing documented subpath imports remain supported.
+
 ---
 
 ## One key, every chain
