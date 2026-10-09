@@ -267,3 +267,7 @@ new in this repository.
 ## Licence
 
 [Apache-2.0](./LICENSE). See [NOTICE](./NOTICE) for attribution.
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=nirholas/evm-vanity&type=Date)](https://www.star-history.com/#nirholas/evm-vanity&Date)
