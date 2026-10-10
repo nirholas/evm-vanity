@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: If you use this software, please cite it as below.
+title: "evm-vanity"
+abstract: "Open-source EVM vanity wallet generator: grind a 0x address in your browser, delegate hard patterns with secp256k1 split-key grinding that cannot expose your key, and verify EIP-712 provenance attestations on chain."
+license: Apache-2.0
+repository-code: "https://github.com/nirholas/evm-vanity"
+url: "https://three.ws"
+authors:
+  - name: three.ws
+    website: "https://three.ws"

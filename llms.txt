@@ -1,0 +1,28 @@
+# evm-vanity
+
+> Open-source EVM vanity wallet generator: grind a 0x address in your browser, delegate hard patterns with secp256k1 split-key grinding that cannot expose your key, and verify EIP-712 provenance attestations on chain.
+
+evm-vanity is an open-source repository by nirholas, part of the three.ws ecosystem.
+
+## Docs
+
+- [README](https://github.com/nirholas/evm-vanity/blob/HEAD/README.md): install, usage and reference
+- [Why another vanity generator](https://github.com/nirholas/evm-vanity/blob/HEAD/README.md#why-another-vanity-generator)
+- [Install and run](https://github.com/nirholas/evm-vanity/blob/HEAD/README.md#install-and-run)
+- [One key, every chain](https://github.com/nirholas/evm-vanity/blob/HEAD/README.md#one-key-every-chain)
+- [The pieces](https://github.com/nirholas/evm-vanity/blob/HEAD/README.md#the-pieces)
+- [CLI](https://github.com/nirholas/evm-vanity/blob/HEAD/README.md#cli)
+- [MCP](https://github.com/nirholas/evm-vanity/blob/HEAD/README.md#mcp)
+- [HTTP API](https://github.com/nirholas/evm-vanity/blob/HEAD/README.md#http-api)
+- [Documentation](https://github.com/nirholas/evm-vanity/blob/HEAD/README.md#documentation)
+- [AGENTS.md](https://github.com/nirholas/evm-vanity/blob/HEAD/AGENTS.md): guidance for coding agents
+- [Full text for LLMs](https://github.com/nirholas/evm-vanity/blob/HEAD/llms-full.txt): the README inlined
+
+## Project
+
+- [Source](https://github.com/nirholas/evm-vanity)
+- [Issues](https://github.com/nirholas/evm-vanity/issues)
+- [Discussions](https://github.com/nirholas/evm-vanity/discussions)
+- [Homepage](https://evm-vanity.gold-cornucopia.workers.dev)
+- [three.ws](https://three.ws): the platform this is part of
+- [All repositories by nirholas](https://github.com/nirholas/nirholas#readme)
