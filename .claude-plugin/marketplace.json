@@ -1,0 +1,6 @@
+{
+  "name": "evm-vanity",
+  "owner": {"name": "nirholas"},
+  "description": "EVM vanity address tools: price, grind locally or by split-key delegation, inspect addresses and verify EIP-712 attestations.",
+  "plugins": [{"name": "evm-vanity", "source": "./", "description": "Vanity address MCP server and skills for pricing, grinding, inspecting and verifying.", "tags": ["evm", "vanity-address", "mcp"]}]
+}
