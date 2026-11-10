@@ -1,6 +1,20 @@
 {
   "name": "evm-vanity",
-  "owner": {"name": "nirholas"},
+  "owner": {
+    "name": "nirholas"
+  },
   "description": "EVM vanity address tools: price, grind locally or by split-key delegation, inspect addresses and verify EIP-712 attestations.",
-  "plugins": [{"name": "evm-vanity", "source": "./", "description": "Vanity address MCP server and skills for pricing, grinding, inspecting and verifying.", "tags": ["evm", "vanity-address", "mcp"]}]
+  "plugins": [
+    {
+      "name": "evm-vanity",
+      "source": "./plugins/evm-vanity",
+      "description": "Vanity address MCP server and skills for pricing, grinding, inspecting and verifying.",
+      "category": "development",
+      "tags": [
+        "evm",
+        "vanity-address",
+        "mcp"
+      ]
+    }
+  ]
 }

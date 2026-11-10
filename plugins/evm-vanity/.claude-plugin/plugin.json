@@ -2,9 +2,18 @@
   "name": "evm-vanity",
   "version": "1.0.0",
   "description": "EVM vanity address tools: price, grind locally or by split-key delegation, inspect addresses and verify EIP-712 attestations.",
-  "author": {"name": "nirholas"},
+  "author": {
+    "name": "nirholas"
+  },
   "repository": "https://github.com/nirholas/evm-vanity",
+  "homepage": "https://evm-vanity.gold-cornucopia.workers.dev",
   "license": "Apache-2.0",
-  "keywords": ["evm", "vanity-address", "secp256k1", "eip55", "eip712", "mcp"],
-  "homepage": "https://evm-vanity.gold-cornucopia.workers.dev"
+  "keywords": [
+    "evm",
+    "vanity-address",
+    "secp256k1",
+    "eip55",
+    "eip712",
+    "mcp"
+  ]
 }
